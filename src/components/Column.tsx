@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useDroppable } from '@dnd-kit/core'
 import type { Card, Column as ColumnType } from '../types'
 import { useKanbanStore } from '../store'
 import { CardItem } from './CardItem'
@@ -23,7 +24,7 @@ export function Column({ column, cards }: ColumnProps) {
   const {
     attributes,
     listeners,
-    setNodeRef,
+    setNodeRef: setSortableRef,
     transform,
     transition,
     isDragging,
@@ -31,6 +32,22 @@ export function Column({ column, cards }: ColumnProps) {
     id: column.id,
     data: { type: 'column', id: column.id },
   })
+
+  const { isOver, setNodeRef: setDropRef } = useDroppable({
+    id: column.id,
+    data: { type: 'column', id: column.id },
+  })
+
+  function mergeRefs(...refs: React.Ref<HTMLDivElement>[]) {
+    return (node: HTMLDivElement | null) => {
+      refs.forEach((ref) => {
+        if (typeof ref === 'function') ref(node)
+        else if (ref && typeof ref === 'object') {
+          ;(ref as React.MutableRefObject<HTMLDivElement | null>).current = node
+        }
+      })
+    }
+  }
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -69,9 +86,9 @@ export function Column({ column, cards }: ColumnProps) {
 
   return (
     <div
-      ref={setNodeRef}
+      ref={mergeRefs(setSortableRef, setDropRef)}
       style={style}
-      className={styles.column}
+      className={`${styles.column} ${isOver ? styles.dragOver : ''}`}
       data-column-id={column.id}
       aria-label={`Column: ${column.title}, ${cards.length} cards`}
     >
